@@ -2,11 +2,34 @@
 
 React/TypeScript frontend and NestJS/TypeScript API with employee CRUD, JWT roles, monthly payroll, and saved payslips. HR manages employees and calculates salaries; employees view their own payslips. Authorization is enforced on the server.
 
+## Demo login
+
+Use this HR account to try the assessment app:
+
+| Login field | Value |
+| --- | --- |
+| Email | `hr@interface.com` |
+| Password | `PayrollDemo@2026!` |
+
+These credentials are public and intended for demo data only. HR can create employee accounts and provide their email/password to those users. Website visitors do not need environment files or Railway access.
+
+Fresh local installations create this account from the supplied environment example. For the deployed demo, the operator must set the same `HR_EMAIL` and `HR_PASSWORD` values in Railway before the first startup. Publishing credentials in this README does not create the account by itself.
+
+To try the employee flow:
+
+1. Log in as HR with the demo credentials above.
+2. Create an employee, entering their email and password in the form.
+3. Calculate a salary for that employee and a selected month/year.
+4. Log out, then log in using that employee's email and password.
+5. On the employee page, select the same month/year and look up the saved payslip.
+
+Only the initial HR account is created automatically. Employee accounts are created by HR; no sample employee account or public signup is provided.
+
 ## Local setup
 
 Use Node.js 22.12 or later in the 22.x release line, npm, and Git.
 
-Copy `api/.env.example` to `api/.env` and `ui/.env.example` to `ui/.env`. Set a random `JWT_SECRET`, your chosen `HR_EMAIL`, and an `HR_PASSWORD` of at least 12 characters. Replace example credentials before deployment. Keep local URLs and ports from the examples.
+Copy `api/.env.example` to `api/.env` and `ui/.env.example` to `ui/.env`. The API example already contains the demo login above; keep those values to use it. Set a random `JWT_SECRET`. Keep local URLs and ports from the examples. Operators hosting a private installation can replace the demo login with their own credentials.
 
 ```sh
 npm run setup
@@ -26,8 +49,8 @@ First startup creates an HR account using the API environment credentials and ha
 | JWT_EXPIRES_IN | Token lifetime, default `1h` |
 | CORS_ORIGINS | Comma-separated frontend origins including scheme/port, without trailing slashes |
 | PORT | Default 3000; supplied by Railway in production |
-| HR_EMAIL | Initial HR account email |
-| HR_PASSWORD | Initial password; required when creating the account, at least 12 characters |
+| HR_EMAIL | Demo login: `hr@interface.com` |
+| HR_PASSWORD | Demo password: `PayrollDemo@2026!`; private installations can override it |
 
 The UI's `VITE_API_URL` is the public API base URL, embedded at build time. Never put secrets in frontend variables. Commit examples, lockfiles, schema, and migrations; ignore environment files, databases, generated clients, and builds.
 
@@ -75,7 +98,14 @@ Connect the GitHub repository, choose branch `main`, and root directory `/api`.
 | Persistent volume mount | `/data` |
 | Replicas | 1 |
 
-Set `NODE_ENV=production`, `DATABASE_URL=file:/data/app.db`, a strong `JWT_SECRET`, `JWT_EXPIRES_IN=1h`, initial `HR_EMAIL`/`HR_PASSWORD`, and `CORS_ORIGINS=https://YOUR-FRONTEND.vercel.app`. Let Railway supply `PORT`; the app listens on `0.0.0.0`. Generate a public backend domain.
+Set `NODE_ENV=production`, `DATABASE_URL=file:/data/app.db`, a strong `JWT_SECRET`, `JWT_EXPIRES_IN=1h`, and `CORS_ORIGINS=https://YOUR-FRONTEND.vercel.app`. For the published assessment demo, set these exact initial login values in Railway:
+
+```env
+HR_EMAIL=hr@interface.com
+HR_PASSWORD=PayrollDemo@2026!
+```
+
+This is a one-time operator setup; users log in directly with the README credentials. Keep the private signing secret separate from the public demo password. Let Railway supply `PORT`; the app listens on `0.0.0.0`. Generate a public backend domain.
 
 The Prisma CLI is a runtime dependency because it runs migrations at startup. `api/railway.json` records the build/start commands; for a monorepo, select `/api/railway.json` as the Railway config-file path if it is not detected automatically. Select Node.js 22.x on Vercel; the API package also specifies Node.js 22.x. The start script applies checked-in pending migrations before launching the API. On an empty volume it creates the tables; subsequent deployments preserve data. Never run `migrate reset` against production.
 
