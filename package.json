@@ -1,0 +1,9 @@
+{
+  "name": "employee-payroll-app",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix api ci && npm --prefix ui ci && npm --prefix api run prisma:generate && npm --prefix api run db:deploy",
+    "build": "npm --prefix api run build && npm --prefix ui run build",
+    "start": "npm run build && node scripts/start.mjs"
+  }
+}
