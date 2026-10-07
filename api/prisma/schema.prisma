@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  HR
+  EMPLOYEE
+}
+
+enum EmployeeStatus {
+  active
+  inactive
+}
+
+model Employee {
+  id                     Int            @id @default(autoincrement())
+  fullName               String
+  email                  String         @unique
+  passwordHash           String
+  role                   Role           @default(EMPLOYEE)
+  jobTitle               String
+  department             String
+  hireDate               DateTime
+  baseMonthlySalary      Int
+  status                 EmployeeStatus @default(active)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime?
+  createdBy              String?
+  updatedBy              String?
+  payslips               Payslip[]
+  createdPayslips        Payslip[]      @relation("PayslipCreator")
+}
+
+model Payslip {
+  id                    Int      @id @default(autoincrement())
+  employeeId            Int
+  year                  Int
+  month                 Int
+  baseSalaryPounds      Int
+  allowancesPounds      Int
+  grossPounds           Int
+  incomeTaxPounds       Int
+  socialInsurancePounds Int
+  netPounds             Int
+  createdAt             DateTime @default(now())
+  createdById           Int?
+  createdBy             Employee? @relation("PayslipCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  employee              Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, year, month])
+}
