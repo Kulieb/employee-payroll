@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../infrastructure/prisma/prisma.service';
 import { PayslipRepository } from './payslip.repository';
@@ -33,8 +33,24 @@ export class PrismaPayslipRepository implements PayslipRepository {
     });
   }
 
-  create(data: Prisma.PayslipCreateInput) {
-    return this.prisma.payslip.create({ data, include: { createdBy } });
+  async createBatch(data: Prisma.PayslipCreateInput[]) {
+    try {
+      return await this.prisma.$transaction(
+        data.map((item) =>
+          this.prisma.payslip.create({ data: item, include: { createdBy } }),
+        ),
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'A selected employee already has a payslip for this month and year',
+        );
+      }
+      throw error;
+    }
   }
 
   findAllWithEmployee() {

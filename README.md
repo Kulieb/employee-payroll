@@ -4,12 +4,14 @@ React/TypeScript frontend and NestJS/TypeScript API with employee CRUD, JWT role
 
 ## Demo login
 
+Open the [live application on Vercel](https://employee-payroll-two.vercel.app/).
+
 Use this HR account to try the assessment app:
 
-| Login field | Value |
-| --- | --- |
-| Email | `hr@interface.com` |
-| Password | `PayrollDemo@2026!` |
+| Login field | Value               |
+| ----------- | ------------------- |
+| Email       | `hr@interface.com`  |
+| Password    | `PayrollDemo@2026!` |
 
 These credentials are public and intended for demo data only. HR can create employee accounts and provide their email/password to those users. Website visitors do not need environment files or Railway access.
 
@@ -42,15 +44,15 @@ First startup creates an HR account using the API environment credentials and ha
 
 ## Configuration
 
-| API variable | Purpose |
-| --- | --- |
-| DATABASE_URL | Local `file:./dev.db`; Railway `file:/data/app.db` |
-| JWT_SECRET | Private token-signing secret |
-| JWT_EXPIRES_IN | Token lifetime, default `1h` |
-| CORS_ORIGINS | Comma-separated frontend origins including scheme/port, without trailing slashes |
-| PORT | Default 3000; supplied by Railway in production |
-| HR_EMAIL | Demo login: `hr@interface.com` |
-| HR_PASSWORD | Demo password: `PayrollDemo@2026!`; private installations can override it |
+| API variable   | Purpose                                                                          |
+| -------------- | -------------------------------------------------------------------------------- |
+| DATABASE_URL   | Local `file:./dev.db`; Railway `file:/data/app.db`                               |
+| JWT_SECRET     | Private token-signing secret                                                     |
+| JWT_EXPIRES_IN | Token lifetime, default `1h`                                                     |
+| CORS_ORIGINS   | Comma-separated frontend origins including scheme/port, without trailing slashes |
+| PORT           | Default 3000; supplied by Railway in production                                  |
+| HR_EMAIL       | Demo login: `hr@interface.com`                                                   |
+| HR_PASSWORD    | Demo password: `PayrollDemo@2026!`; private installations can override it        |
 
 The UI's `VITE_API_URL` is the public API base URL, embedded at build time. Never put secrets in frontend variables. Commit examples, lockfiles, schema, and migrations; ignore environment files, databases, generated clients, and builds.
 
@@ -66,10 +68,14 @@ Prisma provides typed database access and migrations. SQLite keeps installation 
 
 - Money inputs and stored amounts use integer Egyptian pounds; fractional salaries are rejected. Rates use thousandths. This is an assessment model, not statutory payroll guidance.
 - Monthly allowances: transport 500 and housing 1,000 pounds. The calculator supports zero allowances.
-- Annual taxable income is monthly gross multiplied by 12. Progressive annual brackets: 0% up to 40,000; 10% up to 55,000; 15% up to 70,000; 20% up to 200,000; 22.5% up to 400,000; 25% above that. Each rate applies only to its portion.
+- Annual taxable income is monthly gross multiplied by 12, without subtracting insurance or applying personal exemptions. Progressive annual brackets: 0% up to 40,000; 10% up to 55,000; 15% up to 70,000; 20% up to 200,000; 22.5% up to 400,000; 25% above that. Each rate applies only to its portion.
+- An exact upper boundary belongs to the bracket ending at that amount. At annual gross of 400,000 pounds, the portion from 200,000 to 400,000 is taxed at 22.5%, and nothing is taxed at 25%. Total annual tax is 74,750 pounds. At 400,001 pounds, only the extra pound is taxed at 25%, making annual tax 74,750.25 pounds before monthly conversion and rounding.
 - Monthly tax is annual tax divided by 12. Insurance is 11% of base salary clamped to an insurable wage of 2,700–16,700 pounds.
 - Tax and insurance are each rounded upward to the next multiple of 10 pounds, leaving exact multiples unchanged. Intermediate rounding first uses thousandths. Net is gross minus these deductions; other deductions are zero.
+- Each calculation uses a full month's current base salary and fixed allowances. The selected month/year labels the saved payslip; hire dates, attendance, partial months, and historical salary changes do not affect the calculation.
+- There is no minimum net-pay floor. For a very low salary, minimum insurance can exceed gross pay and produce a negative net amount; the calculator returns that result.
 - Inactive employees cannot receive new calculations. Duplicate employee/month/year calculations are rejected. Saved payslips are snapshots; later salary/configuration edits do not recalculate them.
+- Selected employees' payslips are saved in one database transaction: all are saved, or none are. A concurrent duplicate is rejected with HTTP 409 and rolls back the entire batch.
 - Payslips record creation time and creator. Dates are displayed locally. Employee deletion cascades to their payslips; deletion of a creator clears the creator relation on retained payslips.
 - Change rules in `api/src/payroll/domain/payroll.config.ts` and rebuild.
 
@@ -95,12 +101,12 @@ Prisma is the backend's database-access and migration tool, not the host for thi
 
 Connect the GitHub repository, choose branch `main`, and root directory `/api`.
 
-| Setting | Value |
-| --- | --- |
-| Build command | `npm run prisma:generate && npm run build` |
-| Start command | `npm run start:railway` |
-| Persistent volume mount | `/data` |
-| Replicas | 1 |
+| Setting                 | Value                                      |
+| ----------------------- | ------------------------------------------ |
+| Build command           | `npm run prisma:generate && npm run build` |
+| Start command           | `npm run start:railway`                    |
+| Persistent volume mount | `/data`                                    |
+| Replicas                | 1                                          |
 
 Set `NODE_ENV=production`, `DATABASE_URL=file:/data/app.db`, a strong `JWT_SECRET`, `JWT_EXPIRES_IN=1h`, and `CORS_ORIGINS=https://YOUR-FRONTEND.vercel.app`. For the published assessment demo, set these exact initial login values in Railway:
 
@@ -125,8 +131,8 @@ No separate hosted development environment is required. Preview domains need exp
 
 ## Known limitations and next steps
 
-- Current list pagination/search stays as implemented; server-side pagination/search remains an assessment gap.
-- Batch payroll writes are not atomic. Next step: transaction handling and better concurrent duplicate handling.
+- Employee search and sorting are currently handled on the UI side over the loaded list. Next step: add server-side pagination, filtering, and sorting so the API returns only the requested page of matching employees in the chosen order. Include status, hire-date range, and salary-range filters to support larger employee lists.
+- Docker and Docker Compose are not included yet. Next step: package the API and frontend in containers and provide a Compose file to start both together, with a persistent volume for SQLite. This would give reviewers a consistent local runtime without installing Node.js or project dependencies on their machine, and simplify startup to `docker compose up --build` after environment configuration. The current Railway/Vercel deployment does not require this setup.
 - SQLite targets a small single-instance deployment; horizontal scaling would require database/adapter/migration changes, for example PostgreSQL.
 - No password reset, token revocation, SSO, CI, or comprehensive browser/integration tests yet.
 - Some error paths and narrow-screen layouts need refinement. The UI build reports a large bundle warning; API lint has existing warnings.

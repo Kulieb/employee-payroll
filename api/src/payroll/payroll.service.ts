@@ -87,8 +87,7 @@ export class PayrollService {
       0,
     );
 
-    const created: PayslipResponseDto[] = [];
-    for (const employee of resolved) {
+    const data = resolved.map((employee) => {
       const amounts = calculatePayslip(
         {
           baseSalaryPounds: employee.baseMonthlySalary,
@@ -97,7 +96,7 @@ export class PayrollService {
         PAYROLL_CONFIG,
       );
 
-      const row = await this.payslips.create({
+      return {
         employee: { connect: { id: employee.id } },
         createdBy: { connect: { id: user.id } },
         year: payload.year,
@@ -108,12 +107,13 @@ export class PayrollService {
         incomeTaxPounds: amounts.incomeTaxPounds,
         socialInsurancePounds: amounts.socialInsurancePounds,
         netPounds: amounts.netPounds,
-      });
+      };
+    });
 
-      created.push(this.toResponse(row, employee.fullName));
-    }
-
-    return created;
+    const rows = await this.payslips.createBatch(data);
+    return rows.map((row, index) =>
+      this.toResponse(row, resolved[index].fullName),
+    );
   }
 
   async getMyPayslip(

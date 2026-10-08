@@ -17,7 +17,7 @@ export interface PayslipRepository {
     year: number,
     month: number,
   ): Promise<PayslipWithCreator | null>;
-  create(data: Prisma.PayslipCreateInput): Promise<PayslipWithCreator>;
+  createBatch(data: Prisma.PayslipCreateInput[]): Promise<PayslipWithCreator[]>;
   findAllWithEmployee(): Promise<
     (PayslipWithCreator & {
       employee: { id: number; fullName: string };
