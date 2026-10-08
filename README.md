@@ -87,6 +87,10 @@ Unit tests use mocks and require no real database or network. Coverage includes 
 
 ## Railway backend
 
+`GET /health` is public and performs a read-only database query. A successful check returns HTTP 200 with `{"status":"ok","database":"up"}`. Database errors return HTTP 503 in the standard Problem Details format without database details. Locally, open http://localhost:3000/health; the deployed endpoint is https://employee-payroll-production.up.railway.app/health.
+
+Railway's configuration uses `/health` to check readiness before activating a deployment. This is a deployment check, not continuous uptime monitoring. A successful query confirms database connectivity, not the correctness of payroll data or every application feature.
+
 Prisma is the backend's database-access and migration tool, not the host for this SQLite database. No Prisma account or database upload is needed. Railway stores the database file on its volume. A fresh deployment starts without local employee data and provisions only the configured HR account.
 
 Connect the GitHub repository, choose branch `main`, and root directory `/api`.

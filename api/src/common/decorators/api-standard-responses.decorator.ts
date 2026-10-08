@@ -61,3 +61,10 @@ export const ApiNotFound = (options?: ProblemResponseOptions) =>
 
 export const ApiConflict = (options?: ProblemResponseOptions) =>
   problemResponse(HttpStatus.CONFLICT, 'Conflict', options);
+
+export const ApiServiceUnavailable = (options?: ProblemResponseOptions) =>
+  problemResponse(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'Service Unavailable',
+    options,
+  );

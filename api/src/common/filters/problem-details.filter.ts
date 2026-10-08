@@ -23,6 +23,7 @@ const TITLES: Record<number, string> = {
   [HttpStatus.NOT_FOUND]: 'Not Found',
   [HttpStatus.CONFLICT]: 'Conflict',
   [HttpStatus.INTERNAL_SERVER_ERROR]: 'Internal Server Error',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'Service Unavailable',
 };
 
 @Catch()
@@ -33,7 +34,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
     const problem = this.toProblem(exception);
 
-    if (problem.status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (problem.status >= 500) {
       this.logger.error(exception);
     }
 
