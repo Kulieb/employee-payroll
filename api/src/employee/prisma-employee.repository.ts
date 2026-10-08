@@ -16,6 +16,10 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     return this.prisma.employee.findUnique({ where: { id } });
   }
 
+  findByIds(ids: number[]) {
+    return this.prisma.employee.findMany({ where: { id: { in: ids } } });
+  }
+
   findAll() {
     return this.prisma.employee.findMany({
       where: { role: Role.EMPLOYEE },

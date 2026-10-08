@@ -40,18 +40,15 @@ export class PayrollService {
     user: AuthUser,
   ): Promise<PayslipResponseDto[]> {
     const uniqueIds = [...new Set(payload.employeeIds)];
-    const employees = await Promise.all(
-      uniqueIds.map((id) => this.employees.findById(id)),
-    );
+    const employees = await this.employees.findByIds(uniqueIds);
+    const employeesById = new Map(employees.map((item) => [item.id, item]));
 
-    const missing = uniqueIds.find((id, index) => !employees[index]);
+    const missing = uniqueIds.find((id) => !employeesById.has(id));
     if (missing !== undefined) {
       throw new NotFoundException('Employee not found');
     }
 
-    const resolved = employees.filter(
-      (employee): employee is NonNullable<typeof employee> => employee !== null,
-    );
+    const resolved = employees;
 
     for (const employee of resolved) {
       try {
@@ -75,7 +72,7 @@ export class PayrollService {
     );
     if (existing.length > 0) {
       const conflicts = existing.map((row) => {
-        const employee = resolved.find((item) => item.id === row.employeeId);
+        const employee = employeesById.get(row.employeeId);
         const name = employee?.fullName ?? 'Employee';
         return `Employee ${name} already has salary calculated for month ${payload.month} and year ${payload.year}`;
       });
@@ -97,8 +94,8 @@ export class PayrollService {
       );
 
       return {
-        employee: { connect: { id: employee.id } },
-        createdBy: { connect: { id: user.id } },
+        employeeId: employee.id,
+        createdById: user.id,
         year: payload.year,
         month: payload.month,
         baseSalaryPounds: amounts.baseSalaryPounds,
@@ -111,9 +108,12 @@ export class PayrollService {
     });
 
     const rows = await this.payslips.createBatch(data);
-    return rows.map((row, index) =>
-      this.toResponse(row, resolved[index].fullName),
-    );
+    const rowsByEmployeeId = new Map(rows.map((row) => [row.employeeId, row]));
+    return uniqueIds.map((id) => {
+      const row = rowsByEmployeeId.get(id)!;
+      const employee = employeesById.get(id)!;
+      return this.toResponse(row, employee.fullName);
+    });
   }
 
   async getMyPayslip(

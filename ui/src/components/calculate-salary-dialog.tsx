@@ -30,22 +30,27 @@ export const CalculateSalaryDialog = ({
   mode,
   employee,
 }: CalculateSalaryDialogProps) => {
-  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [year, setYear] = useState(() => String(new Date().getFullYear()));
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const [selectedEmployees, setSelectedEmployees] = useState<Employee[]>([]);
   const { employees } = useEmployees();
   const { calculate, isPending, isSuccess, error, reset } =
     useCalculatePayslips();
 
-  const employeeOptions = useMemo(() => employees ?? [], [employees]);
+  const employeeOptions = useMemo(
+    () => (employees ?? []).filter((item) => item.status.value === 'active'),
+    [employees],
+  );
+
+  const activeSelectedEmployees = employeeOptions.filter((item) =>
+    selectedEmployees.some((selected) => selected.id === item.id),
+  );
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
     const date = new Date();
-    setYear(date.getFullYear());
+    setYear(String(date.getFullYear()));
     setMonth(date.getMonth() + 1);
+    setSelectedEmployees([]);
     reset();
   }, [open, mode, reset]);
 
@@ -56,19 +61,29 @@ export const CalculateSalaryDialog = ({
     }
   }, [isSuccess, onClose, reset]);
 
+  const numericYear = Number(year);
+  const yearError =
+    year.trim() === ''
+      ? 'Year is required'
+      : !Number.isInteger(numericYear) ||
+          numericYear < 2000 ||
+          numericYear > 2100
+        ? 'Enter a whole year between 2000 and 2100'
+        : '';
+
   const employeeIds =
     mode === 'single'
       ? employee
         ? [employee.id]
         : []
-      : selectedEmployees.map((item) => item.id);
+      : activeSelectedEmployees.map((item) => item.id);
 
   const submit = () => {
-    if (employeeIds.length === 0) {
+    if (employeeIds.length === 0 || yearError) {
       return;
     }
 
-    calculate({ year, month, employeeIds });
+    calculate({ year: numericYear, month, employeeIds });
   };
 
   return (
@@ -95,32 +110,42 @@ export const CalculateSalaryDialog = ({
           <TextField
             label='Year'
             type='number'
+            required
             value={year}
-            onChange={(event) => setYear(Number(event.target.value))}
+            onChange={(event) => setYear(event.target.value)}
+            error={Boolean(yearError)}
+            helperText={yearError}
             fullWidth
             slotProps={{ htmlInput: { min: 2000, max: 2100 } }}
           />
-          {mode === 'multiple' && (
-            <Autocomplete
-              multiple
-              options={employeeOptions}
-              value={selectedEmployees}
-              onChange={(_, value) => setSelectedEmployees(value)}
-              getOptionLabel={(option) => option.fullName}
-              isOptionEqualToValue={(left, right) => left.id === right.id}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label='Employees'
-                  placeholder={
-                    selectedEmployees.length === 0
-                      ? 'Select employees'
-                      : undefined
-                  }
-                />
-              )}
-            />
-          )}
+          {mode === 'multiple' &&
+            (employeeOptions.length === 0 ? (
+              <Typography>
+                No employees available. Please add active employees to start
+                calculating salary
+              </Typography>
+            ) : (
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                options={employeeOptions}
+                value={activeSelectedEmployees}
+                onChange={(_, value) => setSelectedEmployees(value)}
+                getOptionLabel={(option) => option.fullName}
+                isOptionEqualToValue={(left, right) => left.id === right.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label='Employees'
+                    placeholder={
+                      activeSelectedEmployees.length === 0
+                        ? 'Select employees'
+                        : undefined
+                    }
+                  />
+                )}
+              />
+            ))}
           {error && (
             <Alert severity='error'>
               {error.response?.data.detail ?? 'Could not calculate salary'}
@@ -133,7 +158,7 @@ export const CalculateSalaryDialog = ({
         <Button
           variant='contained'
           onClick={submit}
-          disabled={isPending || employeeIds.length === 0}
+          disabled={isPending || employeeIds.length === 0 || Boolean(yearError)}
         >
           Calculate
         </Button>

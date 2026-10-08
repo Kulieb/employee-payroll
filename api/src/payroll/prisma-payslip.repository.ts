@@ -33,12 +33,13 @@ export class PrismaPayslipRepository implements PayslipRepository {
     });
   }
 
-  async createBatch(data: Prisma.PayslipCreateInput[]) {
+  async createBatch(data: Prisma.PayslipCreateManyInput[]) {
     try {
-      return await this.prisma.$transaction(
-        data.map((item) =>
-          this.prisma.payslip.create({ data: item, include: { createdBy } }),
-        ),
+      return await this.prisma.$transaction((transaction) =>
+        transaction.payslip.createManyAndReturn({
+          data,
+          include: { createdBy },
+        }),
       );
     } catch (error) {
       if (

@@ -76,6 +76,7 @@ Prisma provides typed database access and migrations. SQLite keeps installation 
 - There is no minimum net-pay floor. For a very low salary, minimum insurance can exceed gross pay and produce a negative net amount; the calculator returns that result.
 - Inactive employees cannot receive new calculations. Duplicate employee/month/year calculations are rejected. Saved payslips are snapshots; later salary/configuration edits do not recalculate them.
 - Selected employees' payslips are saved in one database transaction: all are saved, or none are. A concurrent duplicate is rejected with HTTP 409 and rolls back the entire batch.
+- Bulk calculation fetches the selected employees together, validates the batch, and inserts payslips with Prisma's bulk-create operation inside that transaction. Duplicate IDs are calculated once; results follow the requested employee order.
 - Payslips record creation time and creator. Dates are displayed locally. Employee deletion cascades to their payslips; deletion of a creator clears the creator relation on retained payslips.
 - Change rules in `api/src/payroll/domain/payroll.config.ts` and rebuild.
 
@@ -90,6 +91,14 @@ npm run build
 ```
 
 Unit tests use mocks and require no real database or network. Coverage includes payroll boundaries, rounding, invalid inputs/configuration, inactive employees, and employee validation. Starter e2e setup is not the primary verification suite.
+
+## GitHub Actions CI
+
+[CI workflow](.github/workflows/ci.yml) runs on pushes to `main`, pull requests targeting `main`, and manual runs. It uses Node.js 22 on an Ubuntu runner, installs both projects from their lockfiles, generates the Prisma client, runs isolated backend unit tests and frontend lint, and builds both projects.
+
+No repository secrets, running database, or deployed API are required. The workflow's database URL is only used to generate the Prisma client; no database migrations or application startup run in CI. Its frontend URL is a build-time placeholder, and the generated build is not deployed.
+
+After pushing the workflow, open the repository's **Actions** tab, select **CI**, and inspect each step's result. To run it manually, select **Run workflow** on `main`. The test, lint, and build commands above reproduce the checks locally after setup. Railway and Vercel continue deploying through their existing Git integrations; CI reports results without making those deployments wait for the checks.
 
 ## Railway backend
 
@@ -134,7 +143,7 @@ No separate hosted development environment is required. Preview domains need exp
 - Employee search and sorting are currently handled on the UI side over the loaded list. Next step: add server-side pagination, filtering, and sorting so the API returns only the requested page of matching employees in the chosen order. Include status, hire-date range, and salary-range filters to support larger employee lists.
 - Docker and Docker Compose are not included yet. Next step: package the API and frontend in containers and provide a Compose file to start both together, with a persistent volume for SQLite. This would give reviewers a consistent local runtime without installing Node.js or project dependencies on their machine, and simplify startup to `docker compose up --build` after environment configuration. The current Railway/Vercel deployment does not require this setup.
 - SQLite targets a small single-instance deployment; horizontal scaling would require database/adapter/migration changes, for example PostgreSQL.
-- No password reset, token revocation, SSO, CI, or comprehensive browser/integration tests yet.
+- No password reset, token revocation, SSO, or comprehensive browser/integration tests yet.
 - Some error paths and narrow-screen layouts need refinement. The UI build reports a large bundle warning; API lint has existing warnings.
 
 ## AI usage

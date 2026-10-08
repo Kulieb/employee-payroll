@@ -5,6 +5,7 @@ export const EMPLOYEE_REPOSITORY = Symbol('EMPLOYEE_REPOSITORY');
 export interface EmployeeRepository {
   findByEmail(email: string): Promise<Employee | null>;
   findById(id: number): Promise<Employee | null>;
+  findByIds(ids: number[]): Promise<Employee[]>;
   findAll(): Promise<Employee[]>;
   create(data: Prisma.EmployeeCreateInput): Promise<Employee>;
   update(id: number, data: Prisma.EmployeeUpdateInput): Promise<Employee>;
